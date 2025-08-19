@@ -15,7 +15,9 @@ namespace Backend.Controllers;
 [Authorize]
 public class OrdersController : ControllerBase
 {
+    // Khai báo MongoContext để truy cập vào cơ sở dữ liệu MongoDB
     private readonly MongoContext _db;
+    // Constructor để khởi tạo MongoContext
     public OrdersController(MongoContext db) => _db = db;
 
     //[HttpGet]
@@ -29,7 +31,8 @@ public class OrdersController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> List()
     {
-        var uid = User.GetUserId();
+        var uid = User.GetUserId(); // Lấy ID người dùng từ token xác thực
+        // Tạo bộ lọc để tìm các đơn hàng của người dùng hiện tại
         var filter = Builders<Order>.Filter.Eq(o => o.UserId, uid);
         //var items = await _db.Orders.Find(o => o.UserId == uid)
         //    .SortByDescending(o => o.CreatedAt)
@@ -38,9 +41,9 @@ public class OrdersController : ControllerBase
         //return Ok(items);
         var items = await _db.Orders
           .Find(filter)
-          .SortByDescending(o => o.CreatedAt)
-          .ToListAsync();
-
+          .SortByDescending(o => o.CreatedAt) // Sắp xếp theo ngày tạo giảm dần
+          .ToListAsync(); // Lấy danh sách các đơn hàng
+        // Trả về danh sách đơn hàng cho người dùng
         return Ok(items);
     }
     //[HttpPost]
@@ -134,19 +137,20 @@ public class OrdersController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create(CreateOrderDto dto)
     {
-        var uid = User.GetUserId();
+        var uid = User.GetUserId(); // Lấy ID người dùng từ token xác thực
+        // Kiểm tra xem danh sách sản phẩm có rỗng hay không
         if (dto.Items is null || dto.Items.Count == 0)
-            return BadRequest("No items");
-
+            return BadRequest("Không có sản phẩm");
+        // Bắt đầu một phiên truy cập MongoDB
         using var session = await _db.Client.StartSessionAsync();
         session.StartTransaction();
 
         try
         {
-            var orderItems = new List<OrderItem>();
-            decimal total = 0;
+            var orderItems = new List<OrderItem>(); // Danh sách các sản phẩm trong đơn hàng
+            decimal total = 0; // Tổng giá trị của đơn hàng
 
-            foreach (var i in dto.Items)
+            foreach (var i in dto.Items) // Duyệt qua từng sản phẩm trong danh sách
             {
                 var pid = i.ProductId;
 
@@ -170,22 +174,25 @@ public class OrdersController : ControllerBase
                 //    await session.AbortTransactionAsync();
                 //    return BadRequest($"Not enough stock for {product.Name}");
                 //}
+                // Tìm sản phẩm trong cơ sở dữ liệu
                 var product = await _db.Products.Find(productFilter).FirstOrDefaultAsync();
+                // Kiểm tra xem sản phẩm có tồn tại hay không
                 if (product is null)
                 {
                     await session.AbortTransactionAsync();
-                    return NotFound($"Product {pid} not found");
+                    return NotFound($"Sản phẩm {pid} không tìm thấy");
                 }
-
+                // Kiểm tra xem số lượng sản phẩm có đủ hay không
                 if (product.Stock < i.Quantity)
                 {
                     await session.AbortTransactionAsync();
-                    return BadRequest($"Not enough stock for {product.Name}");
+                    return BadRequest($"Không đủ hàng từ sản phẩm {product.Name}");
                 }
 
                 // giảm sản lượng
                 //var filter = filterProduct & Builders<Product>.Filter.Gte(p => p.Stock, i.Quantity);
                 //var update = Builders<Product>.Update.Inc(p => p.Stock, -i.Quantity);
+                // Tạo bộ lọc để giảm số lượng sản phẩm
                 var decStockFilter = Builders<Product>.Filter.And(
                    Builders<Product>.Filter.Eq(p => p.Id, pid),
                    Builders<Product>.Filter.Eq(p => p.UserId, uid),
@@ -199,13 +206,14 @@ public class OrdersController : ControllerBase
                 //    await session.AbortTransactionAsync();
                 //    return BadRequest($"Stock changed, please retry for {product.Name}");
                 //}
+                // Cập nhật số lượng sản phẩm trong cơ sở dữ liệu
                 var updRes = await _db.Products.UpdateOneAsync(session, decStockFilter, decUpdate);
                 if (updRes.ModifiedCount == 0)
                 {
                     await session.AbortTransactionAsync();
-                    return BadRequest($"Stock changed, please retry for {product.Name}");
+                    return BadRequest($"Số lượng đã thay đổi {product.Name}");
                 }
-
+                // Thêm sản phẩm vào danh sách đơn hàng
                 orderItems.Add(new OrderItem
                 {
                     ProductId = product.Id,
@@ -213,22 +221,25 @@ public class OrdersController : ControllerBase
                     Price = product.Price,
                     Quantity = i.Quantity
                 });
-
+                // Tính tổng giá trị của đơn hàng
                 total += product.Price * i.Quantity;
             }
-
+            // Tạo một đơn hàng mới
             var order = new Order
             {
+                // Tạo một Id mới cho đơn hàng
                 Id = ObjectId.GenerateNewId().ToString(), // string Id
                 UserId = uid,
                 Items = orderItems,
                 Total = total,
-                Status = "pending",
+                Status = "pending", // Trạng thái ban đầu là "pending"
                 CreatedAt = DateTime.UtcNow
             };
-
+            // Thêm đơn hàng vào cơ sở dữ liệu
             await _db.Orders.InsertOneAsync(session, order);
+            // Cam kết hoàn thành transaction
             await session.CommitTransactionAsync();
+            // Trả về đơn hàng đã tạo
             return Ok(order);
         }
         catch
@@ -256,22 +267,23 @@ public class OrdersController : ControllerBase
     [HttpPatch("{id}/status")]
     public async Task<IActionResult> UpdateStatus(string id, UpdateOrderStatusDto dto)
     {
-        var uid = User.GetUserId();
-
+        var uid = User.GetUserId(); // Lấy ID người dùng từ token xác thực
+        // Kiểm tra xem ID đơn hàng có hợp lệ hay không
         if (dto.Status is not ("pending" or "completed" or "cancelled"))
             return BadRequest("Invalid status");
 
         //var filter = Builders<Order>.Filter.Eq(o => o.Id, id) &
         //             Builders<Order>.Filter.Eq(o => o.UserId, uid);
+        // Tạo bộ lọc để tìm đơn hàng theo ID và UserId
         var filter = Builders<Order>.Filter.And(
            Builders<Order>.Filter.Eq(o => o.Id, id),
            Builders<Order>.Filter.Eq(o => o.UserId, uid)
        );
-
+        // Cập nhật trạng thái đơn hàng
         var update = Builders<Order>.Update.Set(o => o.Status, dto.Status);
-
+        // Thực hiện cập nhật đơn hàng trong cơ sở dữ liệu
         var res = await _db.Orders.UpdateOneAsync(filter, update);
-
+        // Trả về kết quả cập nhật
         return res.MatchedCount == 0 ? NotFound() : Ok();
     }
 }

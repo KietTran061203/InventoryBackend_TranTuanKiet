@@ -24,9 +24,14 @@ public class Product
     //public int Stock { get; set; }
     //public string? ImageUrl { get; set; }
     //public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+
+    //Đánh dấu khóa chính cho MongoDB
     [BsonId]
+    //Lưu dưới dạng String nhưng sẽ được chuyển đổi thành ObjectId
     [BsonRepresentation(BsonType.ObjectId)]
     public string Id { get; set; }
+    //Tương tự lưu UserId dưới dạng String nhưng chuyển đổi thành ObjectId
 
     [BsonRepresentation(BsonType.ObjectId)]
     public string UserId { get; set; }   // chỉnh là string

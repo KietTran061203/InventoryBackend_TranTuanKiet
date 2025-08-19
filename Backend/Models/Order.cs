@@ -32,10 +32,14 @@ public class Order
     //public string Status { get; set; } = "pending"; // pending|completed|cancelled
     //[BsonRepresentation(BsonType.Decimal128)] public decimal Total { get; set; }
     //public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+
+    // Đánh dấu khóa chính cho MongoDB
     [BsonId]
+    // Lưu dưới dạng String nhưng sẽ được chuyển đổi thành ObjectId
     [BsonRepresentation(BsonType.ObjectId)]
     public string Id { get; set; }
-
+    // Tương tự lưu UserId dưới dạng String nhưng chuyển đổi thành ObjectId
     [BsonRepresentation(BsonType.ObjectId)]
     public string UserId { get; set; }   // phải là string
 

@@ -138,3 +138,4 @@ D:\Test\InventoryBackend\Backend\obj\Debug\net9.0\refint\Backend.dll
 D:\Test\InventoryBackend\Backend\obj\Debug\net9.0\Backend.pdb
 D:\Test\InventoryBackend\Backend\obj\Debug\net9.0\Backend.genruntimeconfig.cache
 D:\Test\InventoryBackend\Backend\obj\Debug\net9.0\ref\Backend.dll
+D:\Test\InventoryBackend\Backend\obj\Debug\net9.0\Backend.sourcelink.json
