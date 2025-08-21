@@ -34,6 +34,8 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod();
     });
 });
+var app = builder.Build();
+app.UseCors("AllowFrontend");
 
 var jwt = builder.Configuration.GetSection("Jwt");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
