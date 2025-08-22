@@ -17,23 +17,23 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-//builder.Services.AddCors(opt =>
-//{
-//    opt.AddPolicy("fe", p => p
-//        .AllowAnyHeader()
-//        .AllowAnyMethod()
-//        .AllowCredentials()
-//        .WithOrigins("http://localhost:5173", "https://your-fe-domain.vercel.app"));
-//});
-builder.Services.AddCors(options =>
+builder.Services.AddCors(opt =>
 {
-    options.AddPolicy("AllowFrontend", policy =>
-    {
-        policy.WithOrigins("https://inventory-frontend-tran-tuan-kiet.vercel.app")
-              .AllowAnyHeader()
-              .AllowAnyMethod();
-    });
+    opt.AddPolicy("fe", p => p
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials()
+        .WithOrigins("https://inventory-frontend-tran-tuan-kiet.vercel.app"));
 });
+//builder.Services.AddCors(options =>
+//{
+//    options.AddPolicy("AllowFrontend", policy =>
+//    {
+//        policy.WithOrigins("https://inventory-frontend-tran-tuan-kiet.vercel.app")
+//              .AllowAnyHeader()
+//              .AllowAnyMethod();
+//    });
+//});
 
 
 var jwt = builder.Configuration.GetSection("Jwt");
@@ -54,8 +54,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
-app.UseCors("AllowFrontend");
-//app.UseCors("fe");
+//app.UseCors("AllowFrontend");
+app.UseCors("fe");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
